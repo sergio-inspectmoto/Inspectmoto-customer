@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { ClipboardCheck, MessageCircle, Search, Check, ShieldCheck, Car, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { createBooking, fetchBookingsByPhone, fetchReportByBooking } from "./firebase.js";
 
-const WHATSAPP = "919999999999"; // TODO: replace with your number
+const WHATSAPP = "919606883464"; // TODO: replace with your number
 const navy = "#16213e";
 const cream = "#f6f4ef";
 
 const PACKAGES = [
-  { name: "Basic", price: "₹999", desc: "30+ point inspection + PDF report" },
+  { name: "Basic", price: "₹699", desc: "30+ point inspection + PDF report" },
   { name: "Standard", price: "₹1,499", desc: "Basic + OBD scan + photos", popular: true },
   { name: "Premium", price: "₹2,199", desc: "Standard + video + negotiation notes" },
 ];
@@ -43,7 +43,7 @@ export default function CustomerApp() {
       const msg = encodeURIComponent(
         `*New Booking - InspectMoto*\nName: ${form.name}\nPhone: ${form.phone}\nVehicle: ${form.vehicle}\nArea: ${form.area}\nPackage: ${pkg}\nNotes: ${form.notes || "-"}`
       );
-      window.open(`https://wa.me/${WHATSAPP}?text=${msg}`, "_blank");
+      window.open(`https://wa.me/919606883464/?text=${msg}`, "_blank");
       setSubmitted(true);
     } catch (e) {
       alert("Booking failed: " + e.message);
