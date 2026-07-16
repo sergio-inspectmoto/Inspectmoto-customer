@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { ClipboardCheck, MessageCircle, Search, Check, ShieldCheck, Car, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { createBooking, fetchBookingsByPhone, fetchReportByBooking } from "./firebase.js";
 
-const WHATSAPP = "919999999999"; // TODO: replace with your number
+const WHATSAPP = "919606883464"; // TODO: replace with your number
 const LOGO = "https://i.ibb.co/HDQ0sXwB/IMG-20260710-213757-285.jpg";
 const navy = "#16213e";
 const cream = "#f6f4ef";
 
 const PACKAGES = [
-  { name: "Basic", price: "₹999", desc: "30+ point inspection + PDF report" },
+  { name: "Basic", price: "₹699", desc: "30+ point inspection + PDF report" },
   { name: "Standard", price: "₹1,499", desc: "Basic + OBD scan + photos", popular: true },
   { name: "Premium", price: "₹2,199", desc: "Standard + video + negotiation notes" },
 ];
