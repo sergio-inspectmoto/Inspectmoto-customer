@@ -44,7 +44,7 @@ export default function CustomerApp() {
       const msg = encodeURIComponent(
         `*New Booking - InspectMoto*\nName: ${form.name}\nPhone: ${form.phone}\nVehicle: ${form.vehicle}\nArea: ${form.area}\nPackage: ${pkg}\nNotes: ${form.notes || "-"}`
       );
-      window.open(`https://wa.me/${WHATSAPP}?text=${msg}`, "_blank");
+      window.open(`https://wa.me/919606883464 ?text=${msg}`, "_blank");
       setSubmitted(true);
     } catch (e) {
       alert("Booking failed: " + e.message);
