@@ -14,13 +14,12 @@ import {
 } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCo5Qjmr1grMpAS_iVCERjOV1vopmd4uYQ",
-  authDomain: "inspectmoto-9b0d5.firebaseapp.com",
-  databaseURL: "https://inspectmoto-9b0d5-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "inspectmoto-9b0d5",
-  storageBucket: "inspectmoto-9b0d5.firebasestorage.app",
-  messagingSenderId: "487219726207",
-  appId: "1:487219726207:web:23d739d17a1808eec0fc4a",
+  apiKey: "AIzaSyDukHdbUYBKBnV5Fw_Grzz7erbqtKwrmZM",
+  authDomain: "inspectmoto-a82d1.firebaseapp.com",
+  projectId: "inspectmoto-a82d1",
+  storageBucket: "inspectmoto-a82d1.firebasestorage.app",
+  messagingSenderId: "697281844288",
+  appId: "1:697281844288:web:1b2cc6d60a8dd973bcbba5"
 };
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
