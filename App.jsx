@@ -199,6 +199,42 @@ export default function CustomerApp() {
           </div>
         )}
 
+       {tab === "services" && (
+  <div style={{ padding: 20 }}>
+    <div style={{ fontSize: 15, fontWeight: 800, color: navy, marginBottom: 4 }}>Our Services</div>
+    <div style={{ fontSize: 12.5, color: "#888", marginBottom: 16 }}>Everything we offer — at your doorstep.</div>
+    {SERVICES.map((s, i) => (
+      <div key={i} style={{ border: "1px solid #e5e2da", borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
+        <div onClick={() => setExpandedService(expandedService === i ? null : i)}
+          style={{ padding: "14px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ fontSize: 28 }}>{s.icon}</div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14.5, color: navy }}>{s.title}</div>
+              <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{s.desc}</div>
+            </div>
+          </div>
+          {expandedService === i ? <ChevronUp size={16} color="#999"/> : <ChevronDown size={16} color="#999"/>}
+        </div>
+        {expandedService === i && (
+          <div style={{ background: "#f9f8f5", padding: "12px 16px", borderTop: "1px solid #eee" }}>
+            {s.items.map((item, j) => (
+              <div key={j} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 13, color: "#444", borderBottom: j < s.items.length - 1 ? "1px solid #eee" : "none" }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: s.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Check size={11} color="#fff" strokeWidth={3}/>
+                </div>
+                {item}
+              </div>
+            ))}
+            <button onClick={() => setTab("book")} style={{ marginTop: 12, width: "100%", background: s.color, color: "#fff", border: "none", borderRadius: 8, padding: "10px 0", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
+              Book Now →
+            </button>
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+)}
         {/* Status tab */}
         {tab === "status" && (
           <div style={{ padding: 20 }}>
