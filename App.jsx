@@ -1,4 +1,4 @@
- import React, { useState } from "react";
+import React, { useState } from "react";
 import { ClipboardCheck, MessageCircle, Search, Check, ChevronDown, ChevronUp, X, Wrench, FileText, Car, BookOpen } from "lucide-react";
 import { createBooking, fetchBookingsByPhone, fetchReportByBooking } from "./firebase.js";
 
@@ -105,8 +105,8 @@ export default function CustomerApp() {
   const [expandedService, setExpandedService] = useState(null);
 
   const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
- {
-  async function submitBooking() 
+ 
+  async function submitBooking() {
     if (!form.name || !form.phone || !form.vehicle) { alert("Please fill in name, phone and vehicle."); return; }
     setSubmitting(true);
     try {
