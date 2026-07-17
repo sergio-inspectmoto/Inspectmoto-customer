@@ -284,6 +284,44 @@ export default function CustomerApp() {
           </div>
         )}
 
+       {selectedPkg && (
+  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+    <div style={{ background: "#fff", borderRadius: "18px 18px 0 0", padding: "24px 20px 32px", width: "100%", maxWidth: 480, maxHeight: "80vh", overflowY: "auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: navy }}>{selectedPkg.name} Package</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "#1d7a4c" }}>{selectedPkg.price}</div>
+        </div>
+        <button onClick={() => setSelectedPkg(null)} style={{ background: "#f0eee8", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <X size={16}/>
+        </button>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "#888", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>What's included</div>
+      {selectedPkg.includes.map((item, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f0eee8", fontSize: 13.5 }}>
+          <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1d7a4c", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Check size={12} color="#fff" strokeWidth={3}/>
+          </div>
+          <span style={{ color: "#333" }}>{item}</span>
+        </div>
+      ))}
+      {selectedPkg.notIncludes.length > 0 && (
+        <>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#888", marginTop: 16, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>Not included</div>
+          {selectedPkg.notIncludes.map((item, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", fontSize: 13, color: "#aaa" }}>
+              <X size={14} color="#ccc"/> {item}
+            </div>
+          ))}
+        </>
+      )}
+      <button onClick={() => { setPkg(selectedPkg.name); setSelectedPkg(null); }}
+        style={{ marginTop: 20, width: "100%", background: navy, color: "#fff", border: "none", borderRadius: 10, padding: "13px 0", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+        Select {selectedPkg.name} — {selectedPkg.price}
+      </button>
+    </div>
+  </div>
+)}
         {/* Footer */}
         <div style={{ padding: "24px 20px 32px", textAlign: "center", background: navy, color: "#fff", marginTop: 8 }}>
           <img src={LOGO} alt="InspectMoto" style={{ width: 50, height: 50, borderRadius: "50%", objectFit: "cover", marginBottom: 10 }} />
