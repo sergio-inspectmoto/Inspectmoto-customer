@@ -13,6 +13,36 @@ const PACKAGES = [
   { name: "Premium", price: "₹2,199", desc: "Standard + video + negotiation notes" },
 ];
 
+const SERVICES = [
+  {
+    icon: "🔍",
+    title: "Used Vehicle Inspection",
+    desc: "Independent 30+ point doorstep inspection before you buy any used car or bike.",
+    items: ["Documents & RC check", "Engine bay inspection", "OBD/DTC scan", "Exterior & accident check", "Interior & electricals", "Test drive assessment", "PDF report on WhatsApp"],
+    color: navy,
+  },
+  {
+    icon: "🔧",
+    title: "Minor Doorstep Repairs",
+    desc: "Quick fixes done at your location — no need to visit a workshop for small issues.",
+    items: ["Bulb & fuse replacement", "Wiper blade replacement", "Battery terminal cleaning", "Oil/coolant/fluid top-up", "Tyre pressure & puncture check", "Basic AC gas check"],
+    color: "#1d7a4c",
+  },
+  {
+    icon: "📄",
+    title: "RC & Documentation Help",
+    desc: "Assistance with vehicle paperwork so your purchase is legally clean.",
+    items: ["RC transfer guidance", "Hypothecation clearance check", "Insurance transfer help", "Ownership verification", "Challan/fine check", "Document authentication"],
+    color: "#0f3460",
+  },
+  {
+    icon: "🚗",
+    title: "Pre-Sale Inspection",
+    desc: "Selling your vehicle? Get it inspected and certified to command a better price.",
+    items: ["Full condition report", "Honest value assessment", "Issues identified before listing", "InspectMoto certification", "Builds buyer trust", "PDF report for listing"],
+    color: "#c98a1e",
+  },
+];
 const RATING_COLORS = {
   Superb: "#1d7a4c", Good: "#4d8f3a", Fair: "#c98a1e",
   Bad: "#c1521f", "Very Bad": "#a32626",
