@@ -8,6 +8,17 @@ const WHATSAPP = "919606883464"; // TODO: replace with your number
 const LOGO = "https://i.ibb.co/JFSqkDvw/IMG-20260718-081713-610.jpg";
 const navy = "#16213e";
 const cream = "#f6f4ef";
+const firebaseConfig = {
+  apiKey: "AIzaSyDukHdbUYBKBnV5Fw_Grzz7erbqtKwrmZM",
+  authDomain: "inspectmoto-a82d1.firebaseapp.com",
+  projectId: "inspectmoto-a82d1",
+  storageBucket: "inspectmoto-a82d1.firebasestorage.app",
+  messagingSenderId: "697281844288",
+  appId: "1:697281844288:web:1b2cc6d60a8dd973bcbba5"
+};
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 const PACKAGES = [
   {
