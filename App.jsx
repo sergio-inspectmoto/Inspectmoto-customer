@@ -1,26 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { ClipboardCheck, MessageCircle, Search, Check, ChevronDown, ChevronUp, X, LogOut } from "lucide-react";
+import React, { useState } from "react";
+import { ClipboardCheck, MessageCircle, Search, Check, ChevronDown, ChevronUp, X } from "lucide-react";
 import { createBooking, fetchBookingsByPhone, fetchReportByBooking } from "./firebase.js";
 
-const WHATSAPP = "919606883464"; // TODO: replace with your number
+const WHATSAPP = "919606883464"; // Replace with your real number
 const LOGO = "https://i.ibb.co/HDQ0sXwB/IMG-20260710-213757-285.jpg";
 const navy = "#16213e";
 const cream = "#f6f4ef";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDukHdbUYBKBnV5Fw_Grzz7erbqtKwrmZM",
-  authDomain: "inspectmoto-a82d1.firebaseapp.com",
-  projectId: "inspectmoto-a82d1",
-  storageBucket: "inspectmoto-a82d1.firebasestorage.app",
-  messagingSenderId: "697281844288",
-  appId: "1:697281844288:web:1b2cc6d60a8dd973bcbba5"
-};
-
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
 
 const PACKAGES = [
   {
@@ -51,44 +36,17 @@ const RATING_COLORS = { Superb: "#1d7a4c", Good: "#4d8f3a", Fair: "#c98a1e", Bad
 const SECTIONS = ["Documents","Exterior","Engine Bay","Interior & Electricals","Test Drive"];
 
 export default function CustomerApp() {
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState("book");
   const [pkg, setPkg] = useState("Standard");
   const [form, setForm] = useState({ name: "", phone: "", vehicle: "", area: "", notes: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [selectedPkg, setSelectedPkg] = useState(null);
+  const [lookupPhone, setLookupPhone] = useState("");
   const [lookupResults, setLookupResults] = useState(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [expandedReport, setExpandedReport] = useState(null);
   const [expandedService, setExpandedService] = useState(null);
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setAuthLoading(false);
-      if (u) {
-        setForm((f) => ({ ...f, name: u.displayName || "", phone: f.phone }));
-      }
-    });
-    return unsub;
-  }, []);
-
-  async function handleGoogleLogin() {
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (e) {
-      alert("Login failed: " + e.message);
-    }
-  }
-
-  async function handleLogout() {
-    await signOut(auth);
-    setSubmitted(false);
-    setLookupResults(null);
-    setTab("book");
-  }
 
   const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -96,18 +54,17 @@ export default function CustomerApp() {
     if (!form.name || !form.phone || !form.vehicle) { alert("Please fill in name, phone and vehicle."); return; }
     setSubmitting(true);
     try {
-      await createBooking({ ...form, package: pkg, userId: user?.uid || null, userEmail: user?.email || null });
+      await createBooking({ ...form, package: pkg });
       setSubmitted(true);
     } catch (e) { alert("Booking failed: " + e.message); }
     setSubmitting(false);
   }
 
   async function lookupBookings() {
-    if (!form.phone && !user) { alert("Enter your phone number."); return; }
+    if (!lookupPhone.trim()) { alert("Enter your phone number."); return; }
     setLookupLoading(true);
     try {
-      const phone = form.phone || "";
-      const bookings = await fetchBookingsByPhone(phone);
+      const bookings = await fetchBookingsByPhone(lookupPhone);
       const withReports = await Promise.all(bookings.map(async (b) => {
         const report = b.reportId ? await fetchReportByBooking(b.id) : null;
         return { ...b, report };
@@ -120,51 +77,18 @@ export default function CustomerApp() {
   const statusColor = { pending: "#c98a1e", assigned: "#4d8f3a", in_progress: "#0f3460", completed: "#1d7a4c" };
   const statusLabel = { pending: "Pending confirmation", assigned: "Inspector assigned", in_progress: "In progress", completed: "Completed ✓" };
 
-  if (authLoading) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "sans-serif", color: "#888" }}>
-      Loading…
-    </div>
-  );
-
-  if (!user) return (
-    <div style={{ minHeight: "100vh", background: cream, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
-      <div style={{ maxWidth: 380, width: "90%", background: "#fff", borderRadius: 18, padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.1)", textAlign: "center" }}>
-        <img src={LOGO} alt="InspectMoto" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", marginBottom: 16, border: `3px solid ${navy}` }} />
-        <div style={{ fontSize: 22, fontWeight: 900, color: navy, marginBottom: 4 }}>InspectMoto</div>
-        <div style={{ fontSize: 13, color: "#888", marginBottom: 28, lineHeight: 1.5 }}>
-          Doorstep vehicle inspections • Bangalore<br/>Sign in to book or track your inspection.
-        </div>
-        <button onClick={handleGoogleLogin} style={{
-          width: "100%", background: "#fff", border: "1.5px solid #ddd",
-          borderRadius: 10, padding: "13px 16px", fontSize: 15, fontWeight: 700,
-          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-        }}>
-          <img src="https://www.google.com/favicon.ico" width={18} height={18} alt="Google" />
-          Continue with Google
-        </button>
-        <div style={{ fontSize: 11, color: "#bbb", marginTop: 16 }}>
-          We'll never post anything without your permission.
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div style={{ minHeight: "100vh", background: cream, fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
       <div style={{ maxWidth: 480, margin: "0 auto", background: "#fff", minHeight: "100vh", boxShadow: "0 0 24px rgba(0,0,0,0.06)" }}>
 
         {/* Header */}
         <div style={{ background: navy, color: "#fff", padding: "14px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <img src={LOGO} alt="InspectMoto" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(255,255,255,0.2)" }} />
-              <div>
-                <div style={{ fontSize: 17, fontWeight: 800 }}>InspectMoto</div>
-                <div style={{ fontSize: 10.5, opacity: 0.7 }}>Hi, {user.displayName?.split(" ")[0]} 👋</div>
-              </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img src={LOGO} alt="InspectMoto" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(255,255,255,0.2)" }} />
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>InspectMoto</div>
+              <div style={{ fontSize: 10.5, opacity: 0.7 }}>Doorstep Vehicle Inspections • Bangalore</div>
             </div>
-            <LogOut size={17} style={{ cursor: "pointer", opacity: 0.7 }} onClick={handleLogout} />
           </div>
         </div>
 
@@ -237,9 +161,9 @@ export default function CustomerApp() {
             <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: navy, marginBottom: 8 }}>Booking Confirmed!</div>
             <div style={{ fontSize: 13.5, color: "#666", lineHeight: 1.6, marginBottom: 24 }}>
-              We'll confirm your slot and assign an inspector shortly. You can track your booking below.
+              We'll confirm your slot and assign an inspector shortly.
             </div>
-            <button onClick={() => { setSubmitted(false); setTab("status"); lookupBookings(); }}
+            <button onClick={() => { setSubmitted(false); setTab("status"); }}
               style={{ background: navy, color: "#fff", border: "none", borderRadius: 8, padding: "11px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
               Track My Booking
             </button>
@@ -289,7 +213,7 @@ export default function CustomerApp() {
           <div style={{ padding: 20 }}>
             <Label>Enter your phone number to find bookings</Label>
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <input value={form.phone} onChange={upd("phone")} placeholder="e.g. 9876543210" type="tel"
+              <input value={lookupPhone} onChange={(e) => setLookupPhone(e.target.value)} placeholder="e.g. 9876543210" type="tel"
                 style={{ flex: 1, padding: "10px 12px", fontSize: 14, border: "1px solid #ddd", borderRadius: 8 }} />
               <button onClick={lookupBookings} style={{ background: navy, color: "#fff", border: "none", borderRadius: 8, padding: "10px 14px", cursor: "pointer" }}>
                 <Search size={16}/>
@@ -413,4 +337,4 @@ function Btn({ children, onClick, disabled, color }) {
 }
 function HeroBadge({ children }) {
   return <div style={{ background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 11.5, fontWeight: 700, padding: "5px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.2)" }}>{children}</div>;
-}    
+}
