@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+import { initializeApp, getApps } from "firebase/app";
 import { ClipboardCheck, MessageCircle, Search, Check, ChevronDown, ChevronUp, X, Wrench, FileText, Car, BookOpen } from "lucide-react";
 import { createBooking, fetchBookingsByPhone, fetchReportByBooking } from "./firebase.js";
 
