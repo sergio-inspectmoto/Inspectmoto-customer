@@ -100,7 +100,6 @@ export default function CustomerApp() {
           </div>
           <div style={{ display: "flex", gap: 7, justifyContent: "center", flexWrap: "wrap" }}>
             <HeroBadge>✅ 30+ Point Check</HeroBadge>
-            <HeroBadge>📄 PDF Report</HeroBadge>
             <HeroBadge>🚗 Doorstep</HeroBadge>
           </div>
         </div>
