@@ -3,7 +3,7 @@ import { ClipboardCheck, MessageCircle, Search, Check, ChevronDown, ChevronUp, X
 import { createBooking, fetchBookingsByPhone, fetchReportByBooking } from "./firebase.js";
 
 const WHATSAPP = "919606883464"; // TODO: replace with your number
-const LOGO = "https://ibb.co/mFP0zf9V";
+const LOGO = "https://i.ibb.co/JFSqkDvw/IMG-20260718-081713-610.jpg";";
 const navy = "#16213e";
 const cream = "#f6f4ef";
 
