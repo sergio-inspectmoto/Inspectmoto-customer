@@ -1,11 +1,11 @@
-    import React, { useState, useEffect, useRef } from "react";
-import { MessageCircle, Search, Check, ChevronDown, ChevronUp, X, Phone, ArrowLeft } from "lucide-react";
+    import React, { useState, useEffect } from "react";
+import { MessageCircle, Search, Check, ChevronDown, ChevronUp, X, LogOut } from "lucide-react";
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import { createBooking, fetchBookingsByPhone, fetchReportByBooking } from "./firebase.js";
 
 const WHATSAPP = "919606883464"; // Replace with your real number
-const LOGO = "https://i.ibb.co/JFSqkDvw/IMG-20260718-081713-610.jpg";
+const LOGO = "https://i.ibb.co/HDQ0sXwB/IMG-20260710-213757-285.jpg";
 const navy = "#16213e";
 const cream = "#f6f4ef";
 
@@ -20,6 +20,7 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 const PACKAGES = [
   {
@@ -58,86 +59,45 @@ export default function CustomerApp() {
   const [selectedPkg, setSelectedPkg] = useState(null);
   const [expandedReport, setExpandedReport] = useState(null);
   const [expandedService, setExpandedService] = useState(null);
-
-  // OTP login state
   const [user, setUser] = useState(null);
-  const [otpStep, setOtpStep] = useState("idle"); // idle | phone | otp | done
-  const [otpPhone, setOtpPhone] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpSending, setOtpSending] = useState(false);
-  const [otpVerifying, setOtpVerifying] = useState(false);
-  const [otpError, setOtpError] = useState("");
-  const confirmRef = useRef(null);
-
-  // Bookings
+  const [authLoading, setAuthLoading] = useState(true);
+  const [lookupPhone, setLookupPhone] = useState("");
   const [lookupResults, setLookupResults] = useState(null);
   const [lookupLoading, setLookupLoading] = useState(false);
 
-  const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return unsub;
+  }, []);
 
-  // Setup recaptcha
-  function setupRecaptcha() {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible",
-        callback: () => {},
-      });
-    }
+  async function handleGoogleLogin() {
+    try { await signInWithPopup(auth, provider); }
+    catch (e) { alert("Login failed: " + e.message); }
   }
 
-  async function sendOTP() {
-    if (!otpPhone.trim() || otpPhone.replace(/\D/g,"").length < 10) {
-      setOtpError("Enter a valid 10-digit phone number."); return;
-    }
-    setOtpSending(true); setOtpError("");
-    try {
-      setupRecaptcha();
-      const phone = "+91" + otpPhone.replace(/\D/g,"").slice(-10);
-      const confirm = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-      confirmRef.current = confirm;
-      setOtpStep("otp");
-    } catch (e) {
-      setOtpError("Failed to send OTP: " + e.message);
-      window.recaptchaVerifier = null;
-    }
-    setOtpSending(false);
-  }
-
-  async function verifyOTP() {
-    if (!otpCode.trim()) { setOtpError("Enter the OTP."); return; }
-    setOtpVerifying(true); setOtpError("");
-    try {
-      const result = await confirmRef.current.confirm(otpCode);
-      setUser(result.user);
-      setOtpStep("done");
-      loadBookings(otpPhone);
-    } catch (e) {
-      setOtpError("Incorrect OTP. Try again.");
-    }
-    setOtpVerifying(false);
+  async function handleLogout() {
+    await signOut(auth);
+    setLookupResults(null);
+    setLookupPhone("");
   }
 
   async function loadBookings(phone) {
     setLookupLoading(true);
     try {
-      const bookings = await fetchBookingsByPhone(phone || otpPhone);
+      const bookings = await fetchBookingsByPhone(phone);
       const withReports = await Promise.all(bookings.map(async (b) => {
         const report = b.reportId ? await fetchReportByBooking(b.id) : null;
         return { ...b, report };
       }));
       setLookupResults(withReports);
-    } catch (e) { console.error(e); }
+    } catch (e) { alert("Lookup failed: " + e.message); }
     setLookupLoading(false);
   }
 
-  async function handleLogout() {
-    await signOut(auth);
-    setUser(null);
-    setOtpStep("idle");
-    setOtpPhone("");
-    setOtpCode("");
-    setLookupResults(null);
-  }
+  const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   async function submitBooking() {
     if (!form.name || !form.phone || !form.vehicle) { alert("Please fill in name, phone and vehicle."); return; }
@@ -154,7 +114,6 @@ export default function CustomerApp() {
 
   return (
     <div style={{ minHeight: "100vh", background: cream, fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
-      <div id="recaptcha-container"></div>
       <div style={{ maxWidth: 480, margin: "0 auto", background: "#fff", minHeight: "100vh", boxShadow: "0 0 24px rgba(0,0,0,0.06)" }}>
 
         {/* Header */}
@@ -168,8 +127,8 @@ export default function CustomerApp() {
               </div>
             </div>
             {user && (
-              <button onClick={handleLogout} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                Sign out
+              <button onClick={handleLogout} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                <LogOut size={12}/> Sign out
               </button>
             )}
           </div>
@@ -225,14 +184,12 @@ export default function CustomerApp() {
                 </div>
               ))}
             </div>
-
             <Label>Your Details</Label>
             <Input placeholder="Full name *" value={form.name} onChange={upd("name")} />
             <Input placeholder="Phone number *" value={form.phone} onChange={upd("phone")} type="tel" />
             <Input placeholder="Vehicle (make, model, year) *" value={form.vehicle} onChange={upd("vehicle")} />
             <Input placeholder="Seller's location / area" value={form.area} onChange={upd("area")} />
             <Input placeholder="Any specific concerns? (optional)" value={form.notes} onChange={upd("notes")} />
-
             <Btn onClick={submitBooking} disabled={submitting} color="#1d7a4c">
               <MessageCircle size={16}/> {submitting ? "Booking…" : "Confirm Booking"}
             </Btn>
@@ -291,68 +248,46 @@ export default function CustomerApp() {
           </div>
         )}
 
-        {/* My Bookings tab — OTP protected */}
+        {/* My Bookings tab — Google login protected */}
         {tab === "status" && (
           <div style={{ padding: 20 }}>
-            {/* Not logged in — show OTP flow */}
-            {!user && otpStep === "idle" && (
+            {authLoading && <div style={{ color: "#888", fontSize: 13 }}>Loading…</div>}
+
+            {!authLoading && !user && (
               <div style={{ textAlign: "center", paddingTop: 20 }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: navy, marginBottom: 8 }}>Verify your identity</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: navy, marginBottom: 8 }}>Sign in to view your bookings</div>
                 <div style={{ fontSize: 13, color: "#888", marginBottom: 24, lineHeight: 1.5 }}>
-                  To protect your privacy, we verify your phone number before showing your bookings.
+                  We protect your booking details with Google sign-in — quick, free, and secure.
                 </div>
-                <Btn onClick={() => setOtpStep("phone")} color={navy}>
-                  <Phone size={16}/> Continue with Phone
-                </Btn>
+                <button onClick={handleGoogleLogin} style={{
+                  width: "100%", background: "#fff", border: "1.5px solid #ddd",
+                  borderRadius: 10, padding: "13px 16px", fontSize: 15, fontWeight: 700,
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                }}>
+                  <img src="https://www.google.com/favicon.ico" width={18} height={18} alt="Google"/>
+                  Continue with Google
+                </button>
               </div>
             )}
 
-            {!user && otpStep === "phone" && (
+            {!authLoading && user && (
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, cursor: "pointer", color: "#555" }} onClick={() => setOtpStep("idle")}>
-                  <ArrowLeft size={16}/> <span style={{ fontSize: 13.5, fontWeight: 600 }}>Back</span>
+                <div style={{ fontSize: 13, color: "#555", marginBottom: 14 }}>
+                  Signed in as <strong>{user.displayName || user.email}</strong>
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: navy, marginBottom: 6 }}>Enter your phone number</div>
-                <div style={{ fontSize: 12.5, color: "#888", marginBottom: 16 }}>We'll send a 6-digit OTP to verify it's you.</div>
-                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                  <div style={{ background: "#eef0f6", borderRadius: 8, padding: "10px 12px", fontSize: 14, fontWeight: 600, color: navy, flexShrink: 0 }}>+91</div>
-                  <input value={otpPhone} onChange={(e) => setOtpPhone(e.target.value)} placeholder="10-digit number" type="tel" maxLength={10}
+                <Label>Enter your phone number to find your bookings</Label>
+                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                  <input value={lookupPhone} onChange={(e) => setLookupPhone(e.target.value)}
+                    placeholder="e.g. 9876543210" type="tel"
                     style={{ flex: 1, padding: "10px 12px", fontSize: 14, border: "1px solid #ddd", borderRadius: 8 }} />
+                  <button onClick={() => loadBookings(lookupPhone)} style={{ background: navy, color: "#fff", border: "none", borderRadius: 8, padding: "10px 14px", cursor: "pointer" }}>
+                    <Search size={16}/>
+                  </button>
                 </div>
-                {otpError && <div style={{ color: "#a32626", fontSize: 12.5, marginBottom: 10 }}>{otpError}</div>}
-                <Btn onClick={sendOTP} disabled={otpSending} color={navy}>
-                  {otpSending ? "Sending OTP…" : "Send OTP"}
-                </Btn>
-              </div>
-            )}
 
-            {!user && otpStep === "otp" && (
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, cursor: "pointer", color: "#555" }} onClick={() => setOtpStep("phone")}>
-                  <ArrowLeft size={16}/> <span style={{ fontSize: 13.5, fontWeight: 600 }}>Change number</span>
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: navy, marginBottom: 6 }}>Enter OTP</div>
-                <div style={{ fontSize: 12.5, color: "#888", marginBottom: 16 }}>Sent to +91 {otpPhone}</div>
-                <input value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder="6-digit OTP" type="tel" maxLength={6}
-                  style={{ width: "100%", padding: "12px", fontSize: 22, fontWeight: 700, border: "1px solid #ddd", borderRadius: 8, textAlign: "center", letterSpacing: 8, boxSizing: "border-box", marginBottom: 10 }} />
-                {otpError && <div style={{ color: "#a32626", fontSize: 12.5, marginBottom: 10 }}>{otpError}</div>}
-                <Btn onClick={verifyOTP} disabled={otpVerifying} color="#1d7a4c">
-                  {otpVerifying ? "Verifying…" : "Verify & View Bookings"}
-                </Btn>
-                <div onClick={sendOTP} style={{ textAlign: "center", fontSize: 12.5, color: "#1d7a4c", fontWeight: 600, marginTop: 14, cursor: "pointer" }}>
-                  Resend OTP
-                </div>
-              </div>
-            )}
-
-            {/* Logged in — show bookings */}
-            {user && (
-              <div>
-                <div style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
-                  Showing bookings for <strong>+91 {otpPhone}</strong>
-                </div>
-                {lookupLoading && <div style={{ color: "#888", fontSize: 13 }}>Loading your bookings…</div>}
+                {lookupLoading && <div style={{ color: "#888", fontSize: 13 }}>Searching…</div>}
                 {lookupResults && lookupResults.length === 0 && <div style={{ color: "#999", fontSize: 13 }}>No bookings found for this number.</div>}
                 {lookupResults && lookupResults.map((b) => (
                   <div key={b.id} style={{ border: "1px solid #e5e2da", borderRadius: 12, marginBottom: 12, overflow: "hidden" }}>
@@ -473,4 +408,4 @@ function Btn({ children, onClick, disabled, color }) {
 function HeroBadge({ children }) {
   return <div style={{ background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 11.5, fontWeight: 700, padding: "5px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.2)" }}>{children}</div>;
 }
-            
+                          
