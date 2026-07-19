@@ -5,7 +5,7 @@ import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut } from "fire
 import { createBooking, fetchBookingsByPhone, fetchReportByBooking } from "./firebase.js";
 
 const WHATSAPP = "919606883464"; // Replace with your real number
-const LOGO = "https://i.ibb.co/HDQ0sXwB/IMG-20260710-213757-285.jpg";
+const LOGO = "https://i.ibb.co/JFSqkDvw/IMG-20260718-081713-610.jpg";
 const navy = "#16213e";
 const cream = "#f6f4ef";
 
