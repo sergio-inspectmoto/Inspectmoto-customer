@@ -1,11 +1,25 @@
-import React, { useState } from "react";
-import { ClipboardCheck, MessageCircle, Search, Check, ChevronDown, ChevronUp, X } from "lucide-react";
+    import React, { useState, useEffect, useRef } from "react";
+import { MessageCircle, Search, Check, ChevronDown, ChevronUp, X, Phone, ArrowLeft } from "lucide-react";
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut } from "firebase/auth";
 import { createBooking, fetchBookingsByPhone, fetchReportByBooking } from "./firebase.js";
 
 const WHATSAPP = "919606883464"; // Replace with your real number
-const LOGO = "https://i.ibb.co/JFSqkDvw/IMG-20260718-081713-610.jpg";
+const LOGO = "https://i.ibb.co/HDQ0sXwB/IMG-20260710-213757-285.jpg";
 const navy = "#16213e";
 const cream = "#f6f4ef";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDukHdbUYBKBnV5Fw_Grzz7erbqtKwrmZM",
+  authDomain: "inspectmoto-a82d1.firebaseapp.com",
+  projectId: "inspectmoto-a82d1",
+  storageBucket: "inspectmoto-a82d1.firebasestorage.app",
+  messagingSenderId: "697281844288",
+  appId: "1:697281844288:web:1b2cc6d60a8dd973bcbba5"
+};
+
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
 const PACKAGES = [
   {
@@ -42,13 +56,88 @@ export default function CustomerApp() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [selectedPkg, setSelectedPkg] = useState(null);
-  const [lookupPhone, setLookupPhone] = useState("");
-  const [lookupResults, setLookupResults] = useState(null);
-  const [lookupLoading, setLookupLoading] = useState(false);
   const [expandedReport, setExpandedReport] = useState(null);
   const [expandedService, setExpandedService] = useState(null);
 
+  // OTP login state
+  const [user, setUser] = useState(null);
+  const [otpStep, setOtpStep] = useState("idle"); // idle | phone | otp | done
+  const [otpPhone, setOtpPhone] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const confirmRef = useRef(null);
+
+  // Bookings
+  const [lookupResults, setLookupResults] = useState(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+
   const upd = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Setup recaptcha
+  function setupRecaptcha() {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+        size: "invisible",
+        callback: () => {},
+      });
+    }
+  }
+
+  async function sendOTP() {
+    if (!otpPhone.trim() || otpPhone.replace(/\D/g,"").length < 10) {
+      setOtpError("Enter a valid 10-digit phone number."); return;
+    }
+    setOtpSending(true); setOtpError("");
+    try {
+      setupRecaptcha();
+      const phone = "+91" + otpPhone.replace(/\D/g,"").slice(-10);
+      const confirm = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+      confirmRef.current = confirm;
+      setOtpStep("otp");
+    } catch (e) {
+      setOtpError("Failed to send OTP: " + e.message);
+      window.recaptchaVerifier = null;
+    }
+    setOtpSending(false);
+  }
+
+  async function verifyOTP() {
+    if (!otpCode.trim()) { setOtpError("Enter the OTP."); return; }
+    setOtpVerifying(true); setOtpError("");
+    try {
+      const result = await confirmRef.current.confirm(otpCode);
+      setUser(result.user);
+      setOtpStep("done");
+      loadBookings(otpPhone);
+    } catch (e) {
+      setOtpError("Incorrect OTP. Try again.");
+    }
+    setOtpVerifying(false);
+  }
+
+  async function loadBookings(phone) {
+    setLookupLoading(true);
+    try {
+      const bookings = await fetchBookingsByPhone(phone || otpPhone);
+      const withReports = await Promise.all(bookings.map(async (b) => {
+        const report = b.reportId ? await fetchReportByBooking(b.id) : null;
+        return { ...b, report };
+      }));
+      setLookupResults(withReports);
+    } catch (e) { console.error(e); }
+    setLookupLoading(false);
+  }
+
+  async function handleLogout() {
+    await signOut(auth);
+    setUser(null);
+    setOtpStep("idle");
+    setOtpPhone("");
+    setOtpCode("");
+    setLookupResults(null);
+  }
 
   async function submitBooking() {
     if (!form.name || !form.phone || !form.vehicle) { alert("Please fill in name, phone and vehicle."); return; }
@@ -60,35 +149,29 @@ export default function CustomerApp() {
     setSubmitting(false);
   }
 
-  async function lookupBookings() {
-    if (!lookupPhone.trim()) { alert("Enter your phone number."); return; }
-    setLookupLoading(true);
-    try {
-      const bookings = await fetchBookingsByPhone(lookupPhone);
-      const withReports = await Promise.all(bookings.map(async (b) => {
-        const report = b.reportId ? await fetchReportByBooking(b.id) : null;
-        return { ...b, report };
-      }));
-      setLookupResults(withReports);
-    } catch (e) { alert("Lookup failed: " + e.message); }
-    setLookupLoading(false);
-  }
-
   const statusColor = { pending: "#c98a1e", assigned: "#4d8f3a", in_progress: "#0f3460", completed: "#1d7a4c" };
   const statusLabel = { pending: "Pending confirmation", assigned: "Inspector assigned", in_progress: "In progress", completed: "Completed ✓" };
 
   return (
     <div style={{ minHeight: "100vh", background: cream, fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
+      <div id="recaptcha-container"></div>
       <div style={{ maxWidth: 480, margin: "0 auto", background: "#fff", minHeight: "100vh", boxShadow: "0 0 24px rgba(0,0,0,0.06)" }}>
 
         {/* Header */}
         <div style={{ background: navy, color: "#fff", padding: "14px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src={LOGO} alt="InspectMoto" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(255,255,255,0.2)" }} />
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 800 }}>InspectMoto</div>
-              <div style={{ fontSize: 10.5, opacity: 0.7 }}>Doorstep Vehicle Inspections • Bangalore</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <img src={LOGO} alt="InspectMoto" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(255,255,255,0.2)" }} />
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>InspectMoto</div>
+                <div style={{ fontSize: 10.5, opacity: 0.7 }}>Doorstep Vehicle Inspections • Bangalore</div>
+              </div>
             </div>
+            {user && (
+              <button onClick={handleLogout} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                Sign out
+              </button>
+            )}
           </div>
         </div>
 
@@ -100,6 +183,7 @@ export default function CustomerApp() {
           </div>
           <div style={{ display: "flex", gap: 7, justifyContent: "center", flexWrap: "wrap" }}>
             <HeroBadge>✅ 30+ Point Check</HeroBadge>
+            <HeroBadge>📄 PDF Report</HeroBadge>
             <HeroBadge>🚗 Doorstep</HeroBadge>
           </div>
         </div>
@@ -207,65 +291,117 @@ export default function CustomerApp() {
           </div>
         )}
 
-        {/* Status tab */}
+        {/* My Bookings tab — OTP protected */}
         {tab === "status" && (
           <div style={{ padding: 20 }}>
-            <Label>Enter your phone number to find bookings</Label>
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-              <input value={lookupPhone} onChange={(e) => setLookupPhone(e.target.value)} placeholder="e.g. 9876543210" type="tel"
-                style={{ flex: 1, padding: "10px 12px", fontSize: 14, border: "1px solid #ddd", borderRadius: 8 }} />
-              <button onClick={lookupBookings} style={{ background: navy, color: "#fff", border: "none", borderRadius: 8, padding: "10px 14px", cursor: "pointer" }}>
-                <Search size={16}/>
-              </button>
-            </div>
-            {lookupLoading && <div style={{ color: "#888", fontSize: 13 }}>Searching…</div>}
-            {lookupResults && lookupResults.length === 0 && <div style={{ color: "#888", fontSize: 13 }}>No bookings found for this number.</div>}
-            {lookupResults && lookupResults.map((b) => (
-              <div key={b.id} style={{ border: "1px solid #e5e2da", borderRadius: 12, marginBottom: 12, overflow: "hidden" }}>
-                <div style={{ padding: "14px 16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14.5 }}>{b.vehicle}</div>
-                      <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{b.package} • {new Date(b.createdAt).toLocaleDateString()}</div>
-                    </div>
-                    <span style={{ background: (statusColor[b.status] || "#999") + "20", color: statusColor[b.status] || "#999", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 4 }}>
-                      {statusLabel[b.status]}
-                    </span>
-                  </div>
-                  {b.inspectorName && <div style={{ fontSize: 12.5, color: "#555", marginTop: 8 }}>Inspector: <strong>{b.inspectorName}</strong></div>}
+            {/* Not logged in — show OTP flow */}
+            {!user && otpStep === "idle" && (
+              <div style={{ textAlign: "center", paddingTop: 20 }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: navy, marginBottom: 8 }}>Verify your identity</div>
+                <div style={{ fontSize: 13, color: "#888", marginBottom: 24, lineHeight: 1.5 }}>
+                  To protect your privacy, we verify your phone number before showing your bookings.
                 </div>
-                {b.report && (
-                  <div style={{ borderTop: "1px solid #eee" }}>
-                    <button onClick={() => setExpandedReport(expandedReport === b.id ? null : b.id)}
-                      style={{ width: "100%", padding: "11px 16px", background: "#f6f4ef", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 700, color: navy, cursor: "pointer" }}>
-                      View Inspection Report {expandedReport === b.id ? <ChevronUp size={15}/> : <ChevronDown size={15}/>}
-                    </button>
-                    {expandedReport === b.id && (
-                      <div style={{ padding: "14px 16px" }}>
-                        {b.report.recommendation && (
-                          <div style={{ background: "#eef0f6", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 4 }}>RECOMMENDATION</div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: navy }}>{b.report.recommendation}</div>
-                          </div>
-                        )}
-                        {SECTIONS.map((s) => (
-                          <div key={s} style={{ marginBottom: 12 }}>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: navy, marginBottom: 6 }}>{s}</div>
-                            {Object.entries(b.report.ratings || {}).filter(([k]) => k.startsWith(s + "__")).map(([k, v]) => (
-                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #f0eee8", fontSize: 12.5 }}>
-                                <span style={{ color: "#555" }}>{k.split("__")[1]}</span>
-                                <span style={{ fontWeight: 700, color: RATING_COLORS[v] || "#999" }}>{v}</span>
+                <Btn onClick={() => setOtpStep("phone")} color={navy}>
+                  <Phone size={16}/> Continue with Phone
+                </Btn>
+              </div>
+            )}
+
+            {!user && otpStep === "phone" && (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, cursor: "pointer", color: "#555" }} onClick={() => setOtpStep("idle")}>
+                  <ArrowLeft size={16}/> <span style={{ fontSize: 13.5, fontWeight: 600 }}>Back</span>
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: navy, marginBottom: 6 }}>Enter your phone number</div>
+                <div style={{ fontSize: 12.5, color: "#888", marginBottom: 16 }}>We'll send a 6-digit OTP to verify it's you.</div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                  <div style={{ background: "#eef0f6", borderRadius: 8, padding: "10px 12px", fontSize: 14, fontWeight: 600, color: navy, flexShrink: 0 }}>+91</div>
+                  <input value={otpPhone} onChange={(e) => setOtpPhone(e.target.value)} placeholder="10-digit number" type="tel" maxLength={10}
+                    style={{ flex: 1, padding: "10px 12px", fontSize: 14, border: "1px solid #ddd", borderRadius: 8 }} />
+                </div>
+                {otpError && <div style={{ color: "#a32626", fontSize: 12.5, marginBottom: 10 }}>{otpError}</div>}
+                <Btn onClick={sendOTP} disabled={otpSending} color={navy}>
+                  {otpSending ? "Sending OTP…" : "Send OTP"}
+                </Btn>
+              </div>
+            )}
+
+            {!user && otpStep === "otp" && (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, cursor: "pointer", color: "#555" }} onClick={() => setOtpStep("phone")}>
+                  <ArrowLeft size={16}/> <span style={{ fontSize: 13.5, fontWeight: 600 }}>Change number</span>
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: navy, marginBottom: 6 }}>Enter OTP</div>
+                <div style={{ fontSize: 12.5, color: "#888", marginBottom: 16 }}>Sent to +91 {otpPhone}</div>
+                <input value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder="6-digit OTP" type="tel" maxLength={6}
+                  style={{ width: "100%", padding: "12px", fontSize: 22, fontWeight: 700, border: "1px solid #ddd", borderRadius: 8, textAlign: "center", letterSpacing: 8, boxSizing: "border-box", marginBottom: 10 }} />
+                {otpError && <div style={{ color: "#a32626", fontSize: 12.5, marginBottom: 10 }}>{otpError}</div>}
+                <Btn onClick={verifyOTP} disabled={otpVerifying} color="#1d7a4c">
+                  {otpVerifying ? "Verifying…" : "Verify & View Bookings"}
+                </Btn>
+                <div onClick={sendOTP} style={{ textAlign: "center", fontSize: 12.5, color: "#1d7a4c", fontWeight: 600, marginTop: 14, cursor: "pointer" }}>
+                  Resend OTP
+                </div>
+              </div>
+            )}
+
+            {/* Logged in — show bookings */}
+            {user && (
+              <div>
+                <div style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
+                  Showing bookings for <strong>+91 {otpPhone}</strong>
+                </div>
+                {lookupLoading && <div style={{ color: "#888", fontSize: 13 }}>Loading your bookings…</div>}
+                {lookupResults && lookupResults.length === 0 && <div style={{ color: "#999", fontSize: 13 }}>No bookings found for this number.</div>}
+                {lookupResults && lookupResults.map((b) => (
+                  <div key={b.id} style={{ border: "1px solid #e5e2da", borderRadius: 12, marginBottom: 12, overflow: "hidden" }}>
+                    <div style={{ padding: "14px 16px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 14.5 }}>{b.vehicle}</div>
+                          <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{b.package} • {new Date(b.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        <span style={{ background: (statusColor[b.status] || "#999") + "20", color: statusColor[b.status] || "#999", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 4 }}>
+                          {statusLabel[b.status]}
+                        </span>
+                      </div>
+                      {b.inspectorName && <div style={{ fontSize: 12.5, color: "#555", marginTop: 8 }}>Inspector: <strong>{b.inspectorName}</strong></div>}
+                    </div>
+                    {b.report && (
+                      <div style={{ borderTop: "1px solid #eee" }}>
+                        <button onClick={() => setExpandedReport(expandedReport === b.id ? null : b.id)}
+                          style={{ width: "100%", padding: "11px 16px", background: "#f6f4ef", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 700, color: navy, cursor: "pointer" }}>
+                          View Inspection Report {expandedReport === b.id ? <ChevronUp size={15}/> : <ChevronDown size={15}/>}
+                        </button>
+                        {expandedReport === b.id && (
+                          <div style={{ padding: "14px 16px" }}>
+                            {b.report.recommendation && (
+                              <div style={{ background: "#eef0f6", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 4 }}>RECOMMENDATION</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: navy }}>{b.report.recommendation}</div>
+                              </div>
+                            )}
+                            {SECTIONS.map((s) => (
+                              <div key={s} style={{ marginBottom: 12 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: navy, marginBottom: 6 }}>{s}</div>
+                                {Object.entries(b.report.ratings || {}).filter(([k]) => k.startsWith(s + "__")).map(([k, v]) => (
+                                  <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #f0eee8", fontSize: 12.5 }}>
+                                    <span style={{ color: "#555" }}>{k.split("__")[1]}</span>
+                                    <span style={{ fontWeight: 700, color: RATING_COLORS[v] || "#999" }}>{v}</span>
+                                  </div>
+                                ))}
                               </div>
                             ))}
+                            {b.report.notes && <div style={{ fontSize: 12.5, color: "#555", marginTop: 8 }}><strong>Notes:</strong> {b.report.notes}</div>}
                           </div>
-                        ))}
-                        {b.report.notes && <div style={{ fontSize: 12.5, color: "#555", marginTop: 8 }}><strong>Notes:</strong> {b.report.notes}</div>}
+                        )}
                       </div>
                     )}
                   </div>
-                )}
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
 
@@ -337,3 +473,4 @@ function Btn({ children, onClick, disabled, color }) {
 function HeroBadge({ children }) {
   return <div style={{ background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 11.5, fontWeight: 700, padding: "5px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.2)" }}>{children}</div>;
 }
+            
