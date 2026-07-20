@@ -9,17 +9,17 @@ const cream = "#f6f4ef";
 
 const PACKAGES = [
   {
-    name: "Basic", price: "₹999", desc: "Full inspection + PDF report", popular: false,
+    name: "Basic", price: "₹599", desc: "Full inspection", popular: false,
     includes: ["Documents & RC verification","Full exterior check","Engine bay inspection","Interior & electricals","Test drive assessment","PDF report on WhatsApp","Overall condition rating","Inspector recommendation"],
     notIncludes: ["OBD/DTC diagnostic scan","Photo evidence in report","Test drive video","Negotiation summary"],
   },
   {
-    name: "Standard", price: "₹1,499", desc: "Basic + OBD scan + photos", popular: true,
+    name: "Standard", price: "₹999", desc: "Basic + OBD scan + photos", popular: true,
     includes: ["Everything in Basic","OBD/DTC diagnostic scan","Photo evidence in report","PDF report on WhatsApp","Inspector recommendation"],
     notIncludes: ["Test drive video","Negotiation summary"],
   },
   {
-    name: "Premium", price: "₹2,199", desc: "Standard + video + negotiation notes", popular: false,
+    name: "Premium", price: "₹1499", desc: "Standard + video + negotiation notes", popular: false,
     includes: ["Everything in Standard","Test drive video recording","Negotiation leverage summary","Price fair value assessment","Priority inspection slot"],
     notIncludes: [],
   },
