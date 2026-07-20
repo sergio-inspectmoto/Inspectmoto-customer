@@ -459,4 +459,4 @@ function Btn({ children, onClick, disabled, color }) {
 }
 function HeroBadge({ children }) {
   return <div style={{ background: "rgba(255,255,255,0.12)", color: "#fff", fontSize: 11.5, fontWeight: 700, padding: "5px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.2)" }}>{children}</div>;
-}
+                           }
